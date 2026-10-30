@@ -1,0 +1,112 @@
+# ==============================================================================
+# Model & Training Configuration: 3D Multi-Plane Vision & Cross-Attention Fusion
+# ==============================================================================
+
+data:
+num_slices: 24
+img_size: [224, 224]
+interpolation_mode: "trilinear"
+volumes_dir: "/content/knee_volumes"
+processed_dir: "data/processed"
+planes: ["sagittal", "coronal", "axial"]
+target_labels:
+- "ACL"
+- "MCL"
+- "Medial Meniscus"
+- "Lateral Meniscus"
+- "Medial OA"
+- "Lateral OA"
+- "PF OA"
+- "Effusion"
+- "Synovitis"
+- "Baker's"
+- "Contusion"
+- "Fracture"
+
+augmentation:
+horizontal_flip_prob: 0.5
+affine:
+prob: 0.5
+rotation_range: [-10.0, 10.0]
+translation_ratio: 0.05
+scale_range: [0.95, 1.05]
+contrast:
+prob: 0.5
+gamma_range: [0.85, 1.15]
+
+stage1_backbone:
+architecture: "convnext_tiny"
+in_channels: 1
+pretrained: true
+feature_dim: 768
+slice_transformer:
+num_heads: 4
+num_layers: 2
+dropout: 0.2
+dim_feedforward: 1536
+classifier_dropout: 0.4
+training:
+epochs: 5
+batch_size: 6
+num_workers: 2
+pin_memory: true
+amp_fp16: true
+optimizer:
+name: "AdamW"
+weight_decay: 0.01
+lr_early_conv: 1.0e-5
+lr_deep_conv: 4.0e-5
+lr_head: 1.2e-4
+scheduler:
+name: "OneCycleLR"
+pct_start: 0.15
+div_factor: 25.0
+final_div_factor: 1.0e+4
+anneal_strategy: "cos"
+
+stage2_fusion:
+freeze_backbones: true
+cross_plane_attention:
+embed_dim: 768
+num_heads: 4
+dropout: 0.3
+ffn_dim: 1536
+ffn_dropout: 0.4
+heads:
+ligament_meniscus:
+hidden_dim: 256
+dropout: 0.55
+num_classes: 4
+bone_joint:
+hidden_dim: 384
+dropout: 0.55
+num_classes: 8
+training:
+epochs: 6
+batch_size: 2
+num_workers: 2
+pin_memory: true
+amp_fp16: true
+patience: 2
+optimizer:
+name: "AdamW"
+lr: 1.2e-4
+weight_decay: 0.03
+scheduler:
+name: "OneCycleLR"
+pct_start: 0.2
+div_factor: 10.0
+final_div_factor: 1.0e+3
+
+loss:
+type: "MaskedAsymmetricLoss"
+gamma_neg: 4.0
+gamma_pos: 1.0
+clip: 0.05
+eps: 1.0e-8
+
+inference:
+batch_size: 4
+use_tta: true
+normalize: "rank_percentile"
+output_csv: "submission.csv"

@@ -1,0 +1,43 @@
+# ==============================================================================
+# Hyperparameter & Pipeline Configuration: LLM Pseudo-Labeling Engine
+# ==============================================================================
+
+model:
+model_id: "Qwen/Qwen2.5-7B-Instruct"
+torch_dtype: "float16"
+attn_implementation: "sdpa"
+low_cpu_mem_usage: true
+trust_remote_code: true
+device_map: "auto"
+
+quantization:
+load_in_4bit: true
+bnb_4bit_quant_type: "nf4"
+bnb_4bit_compute_dtype: "float16"
+bnb_4bit_use_double_quant: true
+
+generation:
+max_new_tokens: 160
+do_sample: false
+repetition_penalty: 1.15
+no_repeat_ngram_size: 3
+max_context_length: 4096
+
+milp_exemplar_selection:
+k_shots: 6
+min_pos_per_label: 1
+fallback_step: 2
+
+runtime:
+batch_size: 2
+sync_frequency_batches: 5
+
+paths:
+train_csv: "data/raw/train.csv"
+checkpoint_csv: "predictions_by_uid.csv"
+output_csv: "data/processed/knee_mri_full_labeled_dataset.csv"
+
+cloud_storage:
+use_drive_sync: false
+secret_key: "GDRIVE_SA_JSON"
+folder_secret_key: "GDRIVE_FOLDER_ID"
